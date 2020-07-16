@@ -16,7 +16,7 @@ public class FightManager : MonoBehaviour
     //You just need determine who wins/loses/draws etc.
     IEnumerator Attack(Character teamACharacter, Character teamBCharacter)
     {
-        float outcome = 0;// the outcome from the fight, i.e. the % that the winner has won by...fractions could help us calculate this, but start with whole numbers i.e. 0 = draw, and 1 = 100% win.
+        float outcome = 1;// the outcome from the fight, i.e. the % that the winner has won by...fractions could help us calculate this, but start with whole numbers i.e. 0 = draw, and 1 = 100% win.
         Character winner = teamACharacter;//defaulting the winner to TeamA.
         Character defeated = teamBCharacter;//defaulting the loser to TeamB.
 
@@ -32,10 +32,25 @@ public class FightManager : MonoBehaviour
         int teamBBattlePoints = teamBCharacter.ReturnBattlePoints();
 
         // We need to do some logic hear to check who wins based on the battle points, we want to handle team A winning, team B winning and draw scenarios.
-        winner = teamACharacter;
-        defeated = teamBCharacter;
-        outcome = 0;
-        BattleLog.Log("Fight is a draw!", drawCol);
+        if (teamABattlePoints > teamBBattlePoints)
+        {
+            winner = teamACharacter;
+            defeated = teamBCharacter;
+        }
+        else if (teamBBattlePoints > teamABattlePoints)
+        {
+            winner = teamBCharacter;
+            defeated = teamACharacter;
+        }
+        else
+        {
+            winner = teamACharacter;
+            defeated = teamBCharacter;
+            outcome = 0;
+            BattleLog.Log("Fight is a draw!", drawCol);
+
+            yield return null;
+        }
 
         Debug.LogWarning("Attack called, may want to use the BattleLog.Log() to report the dancers and the outcome of their dance off.");
 

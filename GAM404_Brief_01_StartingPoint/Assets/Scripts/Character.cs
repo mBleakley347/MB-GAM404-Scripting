@@ -13,12 +13,15 @@ public class Character : MonoBehaviour
 {
     public CharacterName charName; // This is a reference to an instance of the characters name script.
 
-    [Range(0.0f,1.0f)]
+    [Range(0.0f, 1.0f)]
     public float mojoRemaining = 1; // This is the characters hp this is a float 0-100 but is normalised to 0.0 - 1.0;
 
     [Header("Stats")]
     /// <summary>
     /// Stats and descriptions
+    /// Style: increases damage base
+    /// luck: improves chances
+    /// rhythm: decreases damage taken
     /// Strength: The Amount of power behind the moves. increases possible damage
     /// Dexterity: The Amount of grace behind the moves. increases chance to hit
     /// Stamina: The Ability to party on. Determines Health
@@ -26,7 +29,7 @@ public class Character : MonoBehaviour
     /// Dodge Chance: a combination of Dexterity and acuity. determines the ability to blow off the other teams moves
     /// Crit Chance: a combination of Stength and acuity. determines the ability to preform extradinary feats to deal more damage.
     /// </summary>
-    public int availablePoints = 10; // The total amount of points we want to assign to our stats!
+    public int availablePoints = 15; // The total amount of points we want to assign to our stats!
     public enum type
     {
         Attack,
@@ -37,9 +40,9 @@ public class Character : MonoBehaviour
 
     public int level; // This is optional if you want to expand on this to level up your characters and stuff welcome to.
     public int currentXP; // This is optional as well if you want to expand on this brief to assign xp etc!
-    public int style, luck, rhythm;
+    public int style, luck, rhythm;// modifiers
     public int strength, dexterity, stamina, acuity;// base Stats
-    public int dodgeChance, critChance;// Dirived Stats
+    public float dodgeChance, critChance;// Dirived Stats
 
     [Header("Related objects")]
     public DanceTeam myTeam; // This holds a reference to the characters current dance team instance they are assigned to.
@@ -80,6 +83,84 @@ public class Character : MonoBehaviour
                 break;
         }
         Debug.Log(characterFocus);
+        for (int i = 0; i < availablePoints; i++)
+        {
+            switch (UnityEngine.Random.Range(0, 10))
+            {
+                case 0:
+                    style++;
+                    break;
+                case 1:
+                    luck++;
+                    break;
+                case 2:
+                    rhythm++;
+                    break;
+                case 3:
+                    strength++;
+                    break;
+                case 4:
+                    dexterity++;
+                    break;
+                case 5:
+                    stamina++;
+                    break;
+                case 6:
+                    acuity++;
+                    break;
+                default:
+                    switch (characterFocus)
+                    {
+                        case type.Attack:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    strength++;
+                                    break;
+                                case 1:
+                                    dexterity++;
+                                    break;
+                                case 2:
+                                    style++;
+                                    break;
+                            }
+                            break;
+                        case type.Defence:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    stamina++;
+                                    break;
+                                case 1:
+                                    rhythm++;
+                                    break;
+                                case 2:
+                                    acuity++;
+                                    break;
+                            }
+                            break;
+                        case type.Luck:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    luck++;
+                                    break;
+                                case 1:
+                                    acuity++;
+                                    break;
+                                case 2:
+                                    luck++;
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+            }            
+        }
+        dodgeChance = ((dexterity * acuity) + (luck));
+        critChance = ((strength * acuity) + (luck));
+        mojoRemaining = 10 + (stamina * 5);
+
         // We probably want to set out default level and some default random stats 
         // for our luck, style and rythmn.
     }
@@ -90,6 +171,15 @@ public class Character : MonoBehaviour
     /// </summary>
     public void DealDamage(float amount)
     {
+        amount -= rhythm;
+        if (UnityEngine.Random.Range(0f, 100f) > dodgeChance)
+        {
+            mojoRemaining -= amount;
+            if(mojoRemaining <= 0)
+            {
+                myTeam.RemoveFromActive(this);
+            }
+        }
         // we probably want to do a check in here to see if the character is dead or not...
         // if they are we probably want to remove them from their team's active dancer list...sure wish there was a function in their dance team  script we could use for this.
     }
@@ -100,10 +190,14 @@ public class Character : MonoBehaviour
     /// <returns></returns>
     public int ReturnBattlePoints()
     {
+        int battlePoints = 5;
+        battlePoints += UnityEngine.Random.Range(0, 10 + dexterity + (luck / 2));
+        
+        return battlePoints;
         // We want to design some algorithm that will generate a number of points based off of our luck,style and rythm, we probably want to add some randomness in our calculation too
         // to ensure that there is not always a draw, by default it just returns 0. 
         // If you right click this function and find all references you can see where it is called.
-        Debug.LogWarning("ReturnBattlePoints has been called we probably want to create some battle points based on our stats");
+        //Debug.LogWarning("ReturnBattlePoints has been called we probably want to create some battle points based on our stats");
         return 0;
     }
 
@@ -114,7 +208,13 @@ public class Character : MonoBehaviour
     /// </summary>
     public void CalculateXP(float BattleOutcome)
     {
-        Debug.LogWarning("This character needs some xp to be given, the outcome of the fight was: " + BattleOutcome);
+        //Debug.LogWarning("This character needs some xp to be given, the outcome of the fight was: " + BattleOutcome);
+        currentXP += (int)BattleOutcome;
+        if (currentXP >= (level * 10))
+        {
+            LevelUp();
+        }
+
         // The result of the battle is coming in which is stored in BattleOutcome .... we probably want to do something with it to calculate XP.
 
         // We probably also want to check to see if the player can level up and if so do something....
@@ -125,8 +225,14 @@ public class Character : MonoBehaviour
     /// </summary>
     private void LevelUp()
     {
+        level++;
+        AssignSkillPointsOnLevelUp(3);
+        if (currentXP >= (level * 10))
+        {
+            LevelUp();
+        }
         //We probably want to increase the player level, the xp threshold and increase our current skill points based on our level.
-        Debug.LogWarning("Level up has been called");
+        //Debug.LogWarning("Level up has been called");
     }
 
     /// <summary>
@@ -134,7 +240,86 @@ public class Character : MonoBehaviour
     /// </summary>
     public void AssignSkillPointsOnLevelUp(int PointsToAssign)
     {
-        Debug.LogWarning("AssignSkillPointsOnLevelUp has been called " + PointsToAssign);
+        for (int i = 0; i < PointsToAssign; i++)
+        {
+            switch (UnityEngine.Random.Range(0, 10))
+            {
+                case 0:
+                    style++;
+                    break;
+                case 1:
+                    luck++;
+                    break;
+                case 2:
+                    rhythm++;
+                    break;
+                case 3:
+                    strength++;
+                    break;
+                case 4:
+                    dexterity++;
+                    break;
+                case 5:
+                    mojoRemaining += 5;
+                    stamina++;
+                    break;
+                case 6:
+                    acuity++;
+                    break;
+                default:
+                    switch (characterFocus)
+                    {
+                        case type.Attack:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    strength++;
+                                    break;
+                                case 1:
+                                    dexterity++;
+                                    break;
+                                case 2:
+                                    style++;
+                                    break;
+                            }
+                            break;
+                        case type.Defence:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    mojoRemaining += 5;
+                                    stamina++;
+                                    break;
+                                case 1:
+                                    rhythm++;
+                                    break;
+                                case 2:
+                                    acuity++;
+                                    break;
+                            }
+                            break;
+                        case type.Luck:
+                            switch (UnityEngine.Random.Range(0, 3))
+                            {
+                                case 0:
+                                    luck++;
+                                    break;
+                                case 1:
+                                    acuity++;
+                                    break;
+                                case 2:
+                                    luck++;
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+            }
+        }
+        dodgeChance = ((dexterity * acuity) + (luck));
+        critChance = ((strength * acuity) + (luck));
+
+        //Debug.LogWarning("AssignSkillPointsOnLevelUp has been called " + PointsToAssign);
 
         // We are taking an amount of points to assign in, and we want to assign it to our luck, style and rhythm, we 
         // want some random amount of points added to our current values.

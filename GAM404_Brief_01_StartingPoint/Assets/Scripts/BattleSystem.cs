@@ -37,7 +37,9 @@ public class BattleSystem : MonoBehaviour
             Debug.LogWarning("DoRound called, it needs to select a dancer from each team to dance off and put in the FightEventData below");
             //You need to select two random or engineered random characters to fight...so one from team a and one from team b....
             //We then need to pass in the two selected dancers into fightManager.Fight(CharacterA,CharacterB);
-            //fightManager.Fight(charA, charB);
+            Character charA = teamA.activeDancers[Random.Range(0, teamA.activeDancers.Count)];
+            Character charB = teamB.activeDancers[Random.Range(0, teamB.activeDancers.Count)];
+            fightManager.Fight(charA, charB);
         }
         else
         {
@@ -45,7 +47,14 @@ public class BattleSystem : MonoBehaviour
             DanceTeam winner = null; // null is the same as saying nothing...often seen as a null reference in your logs.
 
             // We need to determine a winner...but how?...maybe look at the previous if statements for clues?
-          
+            if (teamA.activeDancers.Count > teamB.activeDancers.Count)
+            {
+                winner = teamA;
+            }
+            else
+            {
+                winner = teamB;
+            }
 
             //Enables the win effects, and logs it out to the console.
             winner.EnableWinEffects();
@@ -59,9 +68,20 @@ public class BattleSystem : MonoBehaviour
     // This is where we can handle what happens when we win or lose.
     public void FightOver(Character winner, Character defeated, float outcome)
     {
-        Debug.LogWarning("FightOver called, may need to check for winners and/or notify teams of zero mojo dancers");   
+        Debug.LogWarning("FightOver called, may need to check for winners and/or notify teams of zero mojo dancers");
         // assign damage...or if you want to restore health if they want that's up to you....might involve the character script.
-
+        float damage = (winner.style + 5 + Random.Range(0, winner.strength));
+        if (UnityEngine.Random.Range(0f, 100f) < winner.critChance)
+        {
+            damage *= 2;
+        }
+        if (outcome != 0)
+        {
+            defeated.DealDamage(damage);
+            winner.CalculateXP(outcome);
+            string message = (string)"Winner: " + winner.charName.nickName + " Defeated: " + defeated.charName.nickName + " damage delt: " + damage;
+            BattleLog.Log(message, Color.black);
+        }
         //calling the coroutine so we can put waits in for anims to play
         StartCoroutine(HandleFightOver());
     }
